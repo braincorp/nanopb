@@ -16,27 +16,31 @@
 /* Define this if your CPU / compiler combination does not support
  * unaligned memory access to packed structures. */
 /* #define PB_NO_PACKED_STRUCTS 1 */
+#ifndef __GNUC__
+#define __GNUC__    1
+#endif
 
 /* Increase the number of required fields that are tracked.
  * A compiler warning will tell if you need this. */
 /* #define PB_MAX_REQUIRED_FIELDS 256 */
 
 /* Add support for tag numbers > 255 and fields larger than 255 bytes. */
-/* #define PB_FIELD_16BIT 1 */
+#define PB_FIELD_16BIT 1
 
 /* Add support for tag numbers > 65536 and fields larger than 65536 bytes. */
 /* #define PB_FIELD_32BIT 1 */
 
 /* Disable support for error messages in order to save some code space. */
-/* #define PB_NO_ERRMSG 1 */
+#define PB_NO_ERRMSG 1 
 
 /* Disable support for custom streams (support only memory buffers). */
-/* #define PB_BUFFER_ONLY 1 */
+#define PB_BUFFER_ONLY 1
+
+#define PB_WITHOUT_64BIT 1
 
 /* Switch back to the old-style callback function signature.
  * This was the default until nanopb-0.2.1. */
 /* #define PB_OLD_CALLBACK_STYLE */
-
 
 /******************************************************************
  * You usually don't need to change anything below this line.     *
@@ -46,7 +50,7 @@
 
 /* Version of the nanopb library. Just in case you want to check it in
  * your own program. */
-#define NANOPB_VERSION nanopb-0.4.0-dev
+#define NANOPB_VERSION nanopb-0.3.9.1
 
 /* Include all the system headers needed by nanopb. You will need the
  * definitions of the following:

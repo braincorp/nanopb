@@ -17,6 +17,43 @@ bool pb_field_iter_begin(pb_field_iter_t *iter, const pb_field_t *fields, void *
     return (iter->pos->tag != 0);
 }
 
+bool pb_field_iter_next_no_oneof(pb_field_iter_t *iter)
+{
+    const pb_field_t *prev_field = iter->pos;
+
+    if (prev_field->tag == 0)
+    {
+        /* Handle empty message types, where the first field is already the terminator.
+         * In other cases, the iter->pos never points to the terminator. */
+        return false;
+    }
+    
+    iter->pos++;
+    
+    if (iter->pos->tag == 0)
+    {
+        /* Wrapped back to beginning exit */
+        return false;
+    }
+    else
+    {
+        /* Increment the pointers based on previous field size */
+        size_t prev_size = prev_field->data_size;
+    
+        if (PB_ATYPE(prev_field->type) == PB_ATYPE_STATIC &&
+            PB_HTYPE(prev_field->type) == PB_HTYPE_REPEATED)
+        {
+            /* In static arrays, the data_size tells the size of a single entry and
+             * array_size is the number of entries */
+            prev_size *= prev_field->array_size;
+        }
+
+        iter->pData = (char*)iter->pData + prev_size + iter->pos->data_offset;
+        iter->pSize = (char*)iter->pData + iter->pos->size_offset;
+        return true;
+    }
+}
+
 bool pb_field_iter_next(pb_field_iter_t *iter)
 {
     const pb_field_t *prev_field = iter->pos;

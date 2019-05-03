@@ -47,12 +47,6 @@ static bool checkreturn pb_dec_fixed_length_bytes(pb_istream_t *stream, const pb
 static bool checkreturn pb_skip_varint(pb_istream_t *stream);
 static bool checkreturn pb_skip_string(pb_istream_t *stream);
 
-#ifdef PB_ENABLE_MALLOC
-static bool checkreturn allocate_field(pb_istream_t *stream, void *pData, size_t data_size, size_t array_size);
-static bool checkreturn pb_release_union_field(pb_istream_t *stream, pb_field_iter_t *iter);
-static void pb_release_single_field(const pb_field_iter_t *iter);
-#endif
-
 #ifdef PB_WITHOUT_64BIT
 #define pb_int64_t int32_t
 #define pb_uint64_t uint32_t
@@ -474,185 +468,11 @@ static bool checkreturn decode_static_field(pb_istream_t *stream, pb_wire_type_t
     }
 }
 
-#ifdef PB_ENABLE_MALLOC
-/* Allocate storage for the field and store the pointer at iter->pData.
- * array_size is the number of entries to reserve in an array.
- * Zero size is not allowed, use pb_free() for releasing.
- */
-static bool checkreturn allocate_field(pb_istream_t *stream, void *pData, size_t data_size, size_t array_size)
-{    
-    void *ptr = *(void**)pData;
-    
-    if (data_size == 0 || array_size == 0)
-        PB_RETURN_ERROR(stream, "invalid size");
-    
-    /* Check for multiplication overflows.
-     * This code avoids the costly division if the sizes are small enough.
-     * Multiplication is safe as long as only half of bits are set
-     * in either multiplicand.
-     */
-    {
-        const size_t check_limit = (size_t)1 << (sizeof(size_t) * 4);
-        if (data_size >= check_limit || array_size >= check_limit)
-        {
-            const size_t size_max = (size_t)-1;
-            if (size_max / array_size < data_size)
-            {
-                PB_RETURN_ERROR(stream, "size too large");
-            }
-        }
-    }
-    
-    /* Allocate new or expand previous allocation */
-    /* Note: on failure the old pointer will remain in the structure,
-     * the message must be freed by caller also on error return. */
-    ptr = pb_realloc(ptr, array_size * data_size);
-    if (ptr == NULL)
-        PB_RETURN_ERROR(stream, "realloc failed");
-    
-    *(void**)pData = ptr;
-    return true;
-}
-
-/* Clear a newly allocated item in case it contains a pointer, or is a submessage. */
-static void initialize_pointer_field(void *pItem, pb_field_iter_t *iter)
-{
-    if (PB_LTYPE(iter->pos->type) == PB_LTYPE_STRING ||
-        PB_LTYPE(iter->pos->type) == PB_LTYPE_BYTES)
-    {
-        *(void**)pItem = NULL;
-    }
-    else if (PB_LTYPE(iter->pos->type) == PB_LTYPE_SUBMESSAGE)
-    {
-        /* We memset to zero so that any callbacks are set to NULL.
-         * Then set any default values. */
-        memset(pItem, 0, iter->pos->data_size);
-        pb_message_set_to_defaults((const pb_field_t *) iter->pos->ptr, pItem);
-    }
-}
-#endif
-
 static bool checkreturn decode_pointer_field(pb_istream_t *stream, pb_wire_type_t wire_type, pb_field_iter_t *iter)
 {
-#ifndef PB_ENABLE_MALLOC
     PB_UNUSED(wire_type);
     PB_UNUSED(iter);
     PB_RETURN_ERROR(stream, "no malloc support");
-#else
-    pb_type_t type;
-    pb_decoder_t func;
-    
-    type = iter->pos->type;
-    func = PB_DECODERS[PB_LTYPE(type)];
-    
-    switch (PB_HTYPE(type))
-    {
-        case PB_HTYPE_REQUIRED:
-        case PB_HTYPE_OPTIONAL:
-        case PB_HTYPE_ONEOF:
-            if (PB_LTYPE(type) == PB_LTYPE_SUBMESSAGE &&
-                *(void**)iter->pData != NULL)
-            {
-                /* Duplicate field, have to release the old allocation first. */
-                pb_release_single_field(iter);
-            }
-        
-            if (PB_HTYPE(type) == PB_HTYPE_ONEOF)
-            {
-                *(pb_size_t*)iter->pSize = iter->pos->tag;
-            }
-
-            if (PB_LTYPE(type) == PB_LTYPE_STRING ||
-                PB_LTYPE(type) == PB_LTYPE_BYTES)
-            {
-                return func(stream, iter->pos, iter->pData);
-            }
-            else
-            {
-                if (!allocate_field(stream, iter->pData, iter->pos->data_size, 1))
-                    return false;
-                
-                initialize_pointer_field(*(void**)iter->pData, iter);
-                return func(stream, iter->pos, *(void**)iter->pData);
-            }
-    
-        case PB_HTYPE_REPEATED:
-            if (wire_type == PB_WT_STRING
-                && PB_LTYPE(type) <= PB_LTYPE_LAST_PACKABLE)
-            {
-                /* Packed array, multiple items come in at once. */
-                bool status = true;
-                pb_size_t *size = (pb_size_t*)iter->pSize;
-                size_t allocated_size = *size;
-                void *pItem;
-                pb_istream_t substream;
-                
-                if (!pb_make_string_substream(stream, &substream))
-                    return false;
-                
-                while (substream.bytes_left)
-                {
-                    if ((size_t)*size + 1 > allocated_size)
-                    {
-                        /* Allocate more storage. This tries to guess the
-                         * number of remaining entries. Round the division
-                         * upwards. */
-                        allocated_size += (substream.bytes_left - 1) / iter->pos->data_size + 1;
-                        
-                        if (!allocate_field(&substream, iter->pData, iter->pos->data_size, allocated_size))
-                        {
-                            status = false;
-                            break;
-                        }
-                    }
-
-                    /* Decode the array entry */
-                    pItem = *(char**)iter->pData + iter->pos->data_size * (*size);
-                    initialize_pointer_field(pItem, iter);
-                    if (!func(&substream, iter->pos, pItem))
-                    {
-                        status = false;
-                        break;
-                    }
-                    
-                    if (*size == PB_SIZE_MAX)
-                    {
-#ifndef PB_NO_ERRMSG
-                        stream->errmsg = "too many array entries";
-#endif
-                        status = false;
-                        break;
-                    }
-                    
-                    (*size)++;
-                }
-                if (!pb_close_string_substream(stream, &substream))
-                    return false;
-                
-                return status;
-            }
-            else
-            {
-                /* Normal repeated field, i.e. only one item at a time. */
-                pb_size_t *size = (pb_size_t*)iter->pSize;
-                void *pItem;
-                
-                if (*size == PB_SIZE_MAX)
-                    PB_RETURN_ERROR(stream, "too many array entries");
-                
-                (*size)++;
-                if (!allocate_field(stream, iter->pData, iter->pos->data_size, *size))
-                    return false;
-            
-                pItem = *(char**)iter->pData + iter->pos->data_size * (*size - 1);
-                initialize_pointer_field(pItem, iter);
-                return func(stream, iter->pos, pItem);
-            }
-
-        default:
-            PB_RETURN_ERROR(stream, "invalid field type");
-    }
-#endif
 }
 
 static bool checkreturn decode_callback_field(pb_istream_t *stream, pb_wire_type_t wire_type, pb_field_iter_t *iter)
@@ -706,16 +526,6 @@ static bool checkreturn decode_callback_field(pb_istream_t *stream, pb_wire_type
 
 static bool checkreturn decode_field(pb_istream_t *stream, pb_wire_type_t wire_type, pb_field_iter_t *iter)
 {
-#ifdef PB_ENABLE_MALLOC
-    /* When decoding an oneof field, check if there is old data that must be
-     * released first. */
-    if (PB_HTYPE(iter->pos->type) == PB_HTYPE_ONEOF)
-    {
-        if (!pb_release_union_field(stream, iter))
-            return false;
-    }
-#endif
-
     switch (PB_ATYPE(iter->pos->type))
     {
         case PB_ATYPE_STATIC:
@@ -1054,11 +864,6 @@ bool checkreturn pb_decode(pb_istream_t *stream, const pb_field_t fields[], void
     pb_message_set_to_defaults(fields, dest_struct);
     status = pb_decode_noinit(stream, fields, dest_struct);
     
-#ifdef PB_ENABLE_MALLOC
-    if (!status)
-        pb_release(fields, dest_struct);
-#endif
-    
     return status;
 }
 
@@ -1097,143 +902,6 @@ bool pb_decode_nullterminated(pb_istream_t *stream, const pb_field_t fields[], v
     /* This behaviour will be separated in nanopb-0.4.0, see issue #278. */
     return pb_decode(stream, fields, dest_struct);
 }
-
-#ifdef PB_ENABLE_MALLOC
-/* Given an oneof field, if there has already been a field inside this oneof,
- * release it before overwriting with a different one. */
-static bool pb_release_union_field(pb_istream_t *stream, pb_field_iter_t *iter)
-{
-    pb_size_t old_tag = *(pb_size_t*)iter->pSize; /* Previous which_ value */
-    pb_size_t new_tag = iter->pos->tag; /* New which_ value */
-
-    if (old_tag == 0)
-        return true; /* Ok, no old data in union */
-
-    if (old_tag == new_tag)
-        return true; /* Ok, old data is of same type => merge */
-
-    /* Release old data. The find can fail if the message struct contains
-     * invalid data. */
-    if (!pb_field_iter_find(iter, old_tag))
-        PB_RETURN_ERROR(stream, "invalid union tag");
-
-    pb_release_single_field(iter);
-
-    /* Restore iterator to where it should be.
-     * This shouldn't fail unless the pb_field_t structure is corrupted. */
-    if (!pb_field_iter_find(iter, new_tag))
-        PB_RETURN_ERROR(stream, "iterator error");
-    
-    return true;
-}
-
-static void pb_release_single_field(const pb_field_iter_t *iter)
-{
-    pb_type_t type;
-    type = iter->pos->type;
-
-    if (PB_HTYPE(type) == PB_HTYPE_ONEOF)
-    {
-        if (*(pb_size_t*)iter->pSize != iter->pos->tag)
-            return; /* This is not the current field in the union */
-    }
-
-    /* Release anything contained inside an extension or submsg.
-     * This has to be done even if the submsg itself is statically
-     * allocated. */
-    if (PB_LTYPE(type) == PB_LTYPE_EXTENSION)
-    {
-        /* Release fields from all extensions in the linked list */
-        pb_extension_t *ext = *(pb_extension_t**)iter->pData;
-        while (ext != NULL)
-        {
-            pb_field_iter_t ext_iter;
-            iter_from_extension(&ext_iter, ext);
-            pb_release_single_field(&ext_iter);
-            ext = ext->next;
-        }
-    }
-    else if (PB_LTYPE(type) == PB_LTYPE_SUBMESSAGE)
-    {
-        /* Release fields in submessage or submsg array */
-        void *pItem = iter->pData;
-        pb_size_t count = 1;
-        
-        if (PB_ATYPE(type) == PB_ATYPE_POINTER)
-        {
-            pItem = *(void**)iter->pData;
-        }
-        
-        if (PB_HTYPE(type) == PB_HTYPE_REPEATED)
-        {
-            if (PB_ATYPE(type) == PB_ATYPE_STATIC && iter->pSize == iter->pData) {
-                /* No _count field so use size of the array */
-                count = iter->pos->array_size;
-            } else {
-                count = *(pb_size_t*)iter->pSize;
-            }
-
-            if (PB_ATYPE(type) == PB_ATYPE_STATIC && count > iter->pos->array_size)
-            {
-                /* Protect against corrupted _count fields */
-                count = iter->pos->array_size;
-            }
-        }
-        
-        if (pItem)
-        {
-            while (count--)
-            {
-                pb_release((const pb_field_t*)iter->pos->ptr, pItem);
-                pItem = (char*)pItem + iter->pos->data_size;
-            }
-        }
-    }
-    
-    if (PB_ATYPE(type) == PB_ATYPE_POINTER)
-    {
-        if (PB_HTYPE(type) == PB_HTYPE_REPEATED &&
-            (PB_LTYPE(type) == PB_LTYPE_STRING ||
-             PB_LTYPE(type) == PB_LTYPE_BYTES))
-        {
-            /* Release entries in repeated string or bytes array */
-            void **pItem = *(void***)iter->pData;
-            pb_size_t count = *(pb_size_t*)iter->pSize;
-            while (count--)
-            {
-                pb_free(*pItem);
-                *pItem++ = NULL;
-            }
-        }
-        
-        if (PB_HTYPE(type) == PB_HTYPE_REPEATED)
-        {
-            /* We are going to release the array, so set the size to 0 */
-            *(pb_size_t*)iter->pSize = 0;
-        }
-        
-        /* Release main item */
-        pb_free(*(void**)iter->pData);
-        *(void**)iter->pData = NULL;
-    }
-}
-
-void pb_release(const pb_field_t fields[], void *dest_struct)
-{
-    pb_field_iter_t iter;
-    
-    if (!dest_struct)
-        return; /* Ignore NULL pointers, similar to free() */
-
-    if (!pb_field_iter_begin(&iter, fields, dest_struct))
-        return; /* Empty message type */
-    
-    do
-    {
-        pb_release_single_field(&iter);
-    } while (pb_field_iter_next(&iter));
-}
-#endif
 
 /* Field decoders */
 
@@ -1406,13 +1074,7 @@ static bool checkreturn pb_dec_bytes(pb_istream_t *stream, const pb_field_t *fie
     
     if (PB_ATYPE(field->type) == PB_ATYPE_POINTER)
     {
-#ifndef PB_ENABLE_MALLOC
         PB_RETURN_ERROR(stream, "no malloc support");
-#else
-        if (!allocate_field(stream, dest, alloc_size, 1))
-            return false;
-        bdest = *(pb_bytes_array_t**)dest;
-#endif
     }
     else
     {
@@ -1441,13 +1103,7 @@ static bool checkreturn pb_dec_string(pb_istream_t *stream, const pb_field_t *fi
     
     if (PB_ATYPE(field->type) == PB_ATYPE_POINTER)
     {
-#ifndef PB_ENABLE_MALLOC
         PB_RETURN_ERROR(stream, "no malloc support");
-#else
-        if (!allocate_field(stream, dest, alloc_size, 1))
-            return false;
-        dest = *(void**)dest;
-#endif
     }
     else
     {

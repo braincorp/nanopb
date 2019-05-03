@@ -50,6 +50,8 @@ struct pb_ostream_s
  * Main encoding functions *
  ***************************/
 
+bool pb_encode_one_of(pb_ostream_t *stream, const pb_field_t fields[], const void *src_struct, uint16_t max_num_fields);
+
 /* Encode a single protocol buffers message from C structure into a stream.
  * Returns true on success, false on any failure.
  * The actual struct pointed to by src_struct must match the description in fields.

@@ -29,6 +29,7 @@ bool pb_field_iter_begin(pb_field_iter_t *iter, const pb_field_t *fields, void *
 /* Advance the iterator to the next field.
  * Returns false when the iterator wraps back to the first field. */
 bool pb_field_iter_next(pb_field_iter_t *iter);
+bool pb_field_iter_next_no_oneof(pb_field_iter_t *iter);
 
 /* Advance the iterator until it points at a field with the given tag.
  * Returns false if no such field exists. */
