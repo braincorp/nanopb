@@ -35,8 +35,6 @@ static bool checkreturn pb_enc_bytes(pb_ostream_t *stream, const pb_field_t *fie
 static bool checkreturn pb_enc_string(pb_ostream_t *stream, const pb_field_t *field, const void *src);
 static bool checkreturn pb_enc_submessage(pb_ostream_t *stream, const pb_field_t *field, const void *src);
 static bool checkreturn pb_enc_fixed_length_bytes(pb_ostream_t *stream, const pb_field_t *field, const void *src);
-bool pb_find_tag(pb_field_iter_t *p_iter, pb_size_t tag_to_find, uint16_t max_num_fields);
-bool pb_shift_data_1_byte(pb_ostream_t *stream, uint16_t bytes_to_shift);
 
 #ifdef PB_WITHOUT_64BIT
 #define pb_int64_t int32_t
@@ -48,7 +46,7 @@ static bool checkreturn pb_encode_negative_varint(pb_ostream_t *stream, pb_uint6
 #define pb_uint64_t uint64_t
 #endif
 
-/* This is the max value that will fit in a varint byte */
+// This is the max value that will fit in a varint byte
 #define VARINT_ONE_BYTE 0x7F
 
 /* --- Function pointers to field encoders ---
@@ -313,33 +311,31 @@ static void *pb_const_cast(const void *p)
     return t.p1;
 }
 
-/* binary search of a tag within a field list */
+// binary search of a tag within a field list
 bool pb_find_tag(pb_field_iter_t *p_iter, pb_size_t tag_to_find, uint16_t max_num_fields)
 {
     bool is_tag_found = false;
     int16_t low_indx = 0;
-    int16_t high_indx = (int16_t) (max_num_fields - 1);   /* field id is 1 based.  convert to 0 based by subtracting 1 */
-    int16_t curr_indx = ((int16_t) (high_indx + low_indx)) >> 1;
-    /* pb_field_t *p_curr_pos = (pb_field_t*)(p_iter->pos) + curr_indx; */
-    pb_field_t *p_curr_pos = pb_const_cast((p_iter->pos) + curr_indx);
+    int16_t high_indx = max_num_fields - 1;   // field id is 1 based.  convert to 0 based by subtracting 1
+    int16_t curr_indx = (high_indx + low_indx)>>1;
+    pb_field_t *p_curr_pos = (pb_field_t *)(p_iter->pos) + curr_indx;
     while( (!is_tag_found) && (high_indx >= low_indx) )
     {
         if (tag_to_find > p_curr_pos->tag)
         {
-            low_indx = (int16_t) (curr_indx + 1);
+            low_indx = curr_indx + 1;
         }
         else if(tag_to_find < p_curr_pos->tag)
         {
-            high_indx = (int16_t) (curr_indx - 1);
+            high_indx = curr_indx - 1;
         }
         else
         {
             is_tag_found = true;
             p_iter->pos += curr_indx;
         }
-        curr_indx = ((int16_t) (high_indx + low_indx)) >> 1;
-        /* p_curr_pos = (pb_field_t *)p_iter->pos + curr_indx; */
-        p_curr_pos = pb_const_cast((p_iter->pos) + curr_indx);
+        curr_indx = (high_indx + low_indx)>>1;
+        p_curr_pos = (pb_field_t *)p_iter->pos + curr_indx;
     }
     return(is_tag_found);
 }
@@ -347,13 +343,13 @@ bool pb_find_tag(pb_field_iter_t *p_iter, pb_size_t tag_to_find, uint16_t max_nu
 bool checkreturn pb_encode_one_of(pb_ostream_t *stream, const pb_field_t fields[], const void *src_struct, uint16_t max_num_fields)
 {
     bool is_encode_successful = false;
-    pb_size_t tag_to_encode = 0;
 
     pb_field_iter_t iter;
     if (!pb_field_iter_begin(&iter, fields, pb_const_cast(src_struct)))
-        return true; /* Empty message type */
+        return true; // Empty message type 
     
-    /* For Static optional, repeated, or oneof field, size_offset is offset to message tag */
+    pb_size_t tag_to_encode = 0;
+    // For Static optional, repeated, or oneof field, size_offset is offset to message tag
     if (iter.pos->size_offset)
     {
         const void *p_message_tag = (const char*)(iter.pData) + iter.pos->size_offset;
@@ -437,7 +433,7 @@ bool checkreturn pb_encode_varint(pb_ostream_t *stream, pb_uint64_t value)
     
     if(stream->callback == NULL)
     {
-        /* this can happen if code is propagating through to calculate the number of bytes to write. */
+        // this can happen if code is propagating through to calculate the number of bytes to write.
         if (value <= 0x7F)
         {
             stream->bytes_written++;
@@ -472,12 +468,12 @@ bool checkreturn pb_encode_varint(pb_ostream_t *stream, pb_uint64_t value)
                 i++;
                 stream->bytes_written ++;
             }
-            dest[i-1] &= 0x7F; /* Unset top bit on last byte */
+            dest[i-1] &= 0x7F; // Unset top bit on last byte 
 
             retval = true;
             if(value)
             {
-                /* if data still remains then we have overflowed. */
+                // if data still remains then we have overflowed.
                 retval = false;
             }
             stream->state = dest + i;
@@ -509,7 +505,7 @@ bool checkreturn pb_encode_fixed32(pb_ostream_t *stream, const void *value)
     {
         if(stream->bytes_written + sizeof(uint32_t) <= stream->max_size)
         {
-            memcpy((uint8_t *)stream->state, (const uint8_t *)value, sizeof(uint32_t));
+            memcpy((uint8_t *)stream->state, (uint8_t *)value, sizeof(uint32_t));
             stream->state = (pb_byte_t*)stream->state + sizeof(uint32_t);
         }
         else
@@ -614,7 +610,7 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
     /* Use a substream to verify that a callback doesn't write more than
      * what it did the first time. */
     substream.callback = stream->callback;
-    substream.state = (void *)((pb_byte_t*)(stream->state) + 1); /* leave room for substream size */
+    substream.state = (void *)((pb_byte_t*)(stream->state) + 1); // leave room for substream size
     substream.max_size = stream->max_size - 1;
     substream.bytes_written = 0;
 #ifndef PB_NO_ERRMSG
@@ -633,7 +629,7 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
     size = substream.bytes_written;
     if(size > VARINT_ONE_BYTE)
     {
-        if (!pb_shift_data_1_byte(stream, (uint16_t) substream.bytes_written))
+        if (!pb_shift_data_1_byte(stream, substream.bytes_written))
             return false;
     }
     
@@ -646,7 +642,7 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
     stream->errmsg = substream.errmsg;
 #endif
 
-    /* if execution has reached here then everything is successful */
+    // if execution has reached here then everything is successful
     return true; 
 }
 
@@ -787,4 +783,3 @@ static bool checkreturn pb_enc_fixed_length_bytes(pb_ostream_t *stream, const pb
 {
     return pb_encode_string(stream, (const pb_byte_t*)src, field->data_size);
 }
-
