@@ -109,7 +109,8 @@ if 'gcc' in env['CC']:
     # GNU Compiler Collection
     
     # Debug info, warnings as errors
-    env.Append(CFLAGS = '-ansi -pedantic -g -Wall -Werror -fprofile-arcs -ftest-coverage ')
+    #env.Append(CFLAGS = '-ansi -pedantic -g -Wall -Werror -fprofile-arcs -ftest-coverage ')
+    env.Append(CFLAGS = '-pedantic -g -Wall -fprofile-arcs -ftest-coverage ')
     env.Append(CORECFLAGS = '-Wextra')
     env.Append(LINKFLAGS = '-g --coverage')
     
@@ -151,7 +152,10 @@ env['COMMON'] = '#' + env['VARIANT_DIR'] + '/common'
 # to other SConscripts.
 SConscript("common/SConscript", exports = 'env', variant_dir = env['VARIANT_DIR'] + '/common')
 
-for subdir in Glob('*/SConscript') + Glob('regression/*/SConscript'):
-    if str(subdir).startswith("common"): continue
-    SConscript(subdir, exports = 'env', variant_dir = env['VARIANT_DIR'] + '/' + os.path.dirname(str(subdir)))
+#for subdir in Glob('*/SConscript') + Glob('regression/*/SConscript'):
+#    if str(subdir).startswith("common"): continue
+#    SConscript(subdir, exports = 'env', variant_dir = env['VARIANT_DIR'] + '/' + os.path.dirname(str(subdir)))
 
+
+subdir = "without_64bit/SConscript"
+SConscript(subdir, exports = 'env', variant_dir = env['VARIANT_DIR'] + '/' + os.path.dirname(str(subdir)))

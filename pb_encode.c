@@ -35,6 +35,7 @@ static bool checkreturn pb_enc_bytes(pb_ostream_t *stream, const pb_field_t *fie
 static bool checkreturn pb_enc_string(pb_ostream_t *stream, const pb_field_t *field, const void *src);
 static bool checkreturn pb_enc_submessage(pb_ostream_t *stream, const pb_field_t *field, const void *src);
 static bool checkreturn pb_enc_fixed_length_bytes(pb_ostream_t *stream, const pb_field_t *field, const void *src);
+bool pb_find_tag(pb_field_iter_t *p_iter, pb_size_t tag_to_find, uint16_t max_num_fields);
 
 #ifdef PB_WITHOUT_64BIT
 #define pb_int64_t int32_t
