@@ -20,6 +20,10 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 #set -e
 
+cd $DIR/generator/proto
+make
+cd $DIR
+
 cd $DIR/tests
 scons #run the build/test suite
 RETVAL=$?
@@ -28,6 +32,7 @@ if [ $RETVAL == "0" ]; then
     echo "Tests passed; nanopb is OK!"
 else
     echo "Tests failed; nanopb is sad."
+    exit 1
 fi
 echo; echo; echo;
 scons -c #cleanup
