@@ -1,10 +1,10 @@
-syntax = "proto2";
+syntax = "proto3";
 // package name placeholder
 
 message SubMessage {
-    required string substuff1 = 1 [default = "1"];
-    required int32 substuff2 = 2 [default = 2];
-    optional fixed32 substuff3 = 3 [default = 3];
+    string substuff1 = 1;
+    int32 substuff2 = 2;
+    fixed32 substuff3 = 3;
 }
 
 message EmptyMessage {
@@ -12,17 +12,18 @@ message EmptyMessage {
 }
 
 enum HugeEnum {
+    Nothing = 0;
     Negative = -2147483647; /* protoc doesn't accept -2147483648 here */
     Positive =  2147483647;
 }
 
 message Limits {
-    required int32      int32_min  =  1 [default = 2147483647];
-    required int32      int32_max  =  2 [default = -2147483647];
-    required uint32     uint32_min =  3 [default = 4294967295];
-    required uint32     uint32_max =  4 [default = 0];
-    required HugeEnum   enum_min   =  9 [default = Positive];
-    required HugeEnum   enum_max   = 10 [default = Negative];
+    int32      int32_min  =  1;
+    int32      int32_max  =  2;
+    // uint32     uint32_min =  3;
+    uint32     uint32_max =  4;
+    HugeEnum   enum_min   =  9;
+    HugeEnum   enum_max   = 10;
 }
 
 enum MyEnum {
@@ -33,68 +34,67 @@ enum MyEnum {
 }
 
 message AllTypes {
-    required int32      req_int32   = 1;
-    required uint32     req_uint32  = 3;
-    required sint32     req_sint32  = 5;
-    required bool       req_bool    = 7;
+    int32      req_int32   = 1;
+    uint32     req_uint32  = 3;
+    sint32     req_sint32  = 5;
+    bool       req_bool    = 7;
     
-    required fixed32    req_fixed32 = 8;
-    required sfixed32   req_sfixed32= 9;
-    required float      req_float   = 10;
+    fixed32    req_fixed32 = 8;
+    sfixed32   req_sfixed32= 9;
+    float      req_float   = 10;
     
-    required string     req_string  = 14;
-    required bytes      req_bytes   = 15;
-    required SubMessage req_submsg  = 16;
-    required MyEnum     req_enum    = 17;
-    required EmptyMessage req_emptymsg = 18;
-    required bytes      req_fbytes  = 19;
+    string     req_string  = 14;
+    bytes      req_bytes   = 15;
+    SubMessage req_submsg  = 16;
+    MyEnum     req_enum    = 17;
+    EmptyMessage req_emptymsg = 18;
+    bytes      req_fbytes  = 19;
     
-    repeated int32      rep_int32   = 21 [packed = true];
-    repeated uint32     rep_uint32  = 23 [packed = true];
-    repeated sint32     rep_sint32  = 25 [packed = true];
-    repeated bool       rep_bool    = 27 [packed = true];
+    repeated int32      rep_int32   = 21;
+    repeated uint32     rep_uint32  = 23;
+    repeated sint32     rep_sint32  = 25;
+    repeated bool       rep_bool    = 27;
     
-    repeated fixed32    rep_fixed32 = 28 [packed = true];
-    repeated sfixed32   rep_sfixed32= 29 [packed = true];
-    repeated float      rep_float   = 30 [packed = true];
+    repeated fixed32    rep_fixed32 = 28;
+    repeated sfixed32   rep_sfixed32= 29;
+    repeated float      rep_float   = 30;
     
     repeated string     rep_string  = 34;
     repeated bytes      rep_bytes   = 35;
     repeated SubMessage rep_submsg  = 36;
-    repeated MyEnum     rep_enum    = 37 [packed = true];
+    repeated MyEnum     rep_enum    = 37;
     repeated EmptyMessage rep_emptymsg = 38;
     repeated bytes      rep_fbytes  = 39;
     
-    optional int32      opt_int32   = 41 [default = 4041];
-    optional uint32     opt_uint32  = 43 [default = 4043];
-    optional sint32     opt_sint32  = 45 [default = 4045];
-    optional bool       opt_bool    = 47 [default = false];
+    int32      opt_int32   = 41;
+    uint32     opt_uint32  = 43;
+    sint32     opt_sint32  = 45;
+    bool       opt_bool    = 47;
     
-    optional fixed32    opt_fixed32 = 48 [default = 4048];
-    optional sfixed32   opt_sfixed32= 49 [default = 4049];
-    optional float      opt_float   = 50 [default = 4050];
+    fixed32    opt_fixed32 = 48;
+    sfixed32   opt_sfixed32= 49;
+    float      opt_float   = 50;
     
-    optional string     opt_string  = 54 [default = "4054"];
-    optional bytes      opt_bytes   = 55 [default = "4055"];
-    optional SubMessage opt_submsg  = 56;
-    optional MyEnum     opt_enum    = 57 [default = Second];
-    optional EmptyMessage opt_emptymsg = 58;
-    optional bytes      opt_fbytes  = 59 [default = "4059"];
+    string     opt_string  = 54;
+    bytes      opt_bytes   = 55;
+    // SubMessage opt_submsg  = 56;
+    MyEnum     opt_enum    = 57;
+    // EmptyMessage opt_emptymsg = 58;
+    bytes      opt_fbytes  = 59;
 
-    oneof oneof
-    {
-        SubMessage oneof_msg1 = 60;
-        EmptyMessage oneof_msg2 = 61;
-    }
+    // oneof oneof
+    // {
+    //     SubMessage oneof_msg1 = 60;
+    //     EmptyMessage oneof_msg2 = 61;
+    // }
     
     // Check that extreme integer values are handled correctly
-    required Limits     req_limits = 98;
+    Limits     req_limits = 98;
 
     // Just to make sure that the size of the fields has been calculated
     // properly, i.e. otherwise a bug in last field might not be detected.
-    required int32      end = 99;
+    // required int32      end = 99;
 
 
-    extensions 200 to 255;
 }
 

@@ -10,7 +10,8 @@
 
 int main(int argc, char **argv)
 {
-    int mode = (argc > 1) ? atoi(argv[1]) : 0;
+    // int mode = (argc > 1) ? atoi(argv[1]) : 0;
+    // int mode = 1;
     
     /* Initialize the structure with constants */
     AllTypes alltypes = AllTypes_init_zero;
@@ -29,6 +30,7 @@ int main(int argc, char **argv)
     memcpy(alltypes.req_bytes.bytes, "1015", 4);
     strcpy(alltypes.req_submsg.substuff1, "1016");
     alltypes.req_submsg.substuff2 = 1016;
+    alltypes.req_submsg.substuff3 = 3;
     alltypes.req_enum = MyEnum_Truth;
     memcpy(alltypes.req_fbytes, "1019", 4);
     
@@ -45,11 +47,10 @@ int main(int argc, char **argv)
     alltypes.rep_bytes_count = 5; alltypes.rep_bytes[4].size = 4;
     memcpy(alltypes.rep_bytes[4].bytes, "2015", 4);
 
-    alltypes.rep_submsg_count = 5;
-    strcpy(alltypes.rep_submsg[4].substuff1, "2016");
-    alltypes.rep_submsg[4].substuff2 = 2016;
-    alltypes.rep_submsg[4].has_substuff3 = true;
-    alltypes.rep_submsg[4].substuff3 = 2016;
+    // alltypes.rep_submsg_count = 5;
+    // strcpy(alltypes.rep_submsg[4].substuff1, "2016");
+    // alltypes.rep_submsg[4].substuff2 = 2016;
+    // alltypes.rep_submsg[4].substuff3 = 2016;
     
     alltypes.rep_enum_count = 5; alltypes.rep_enum[4] = MyEnum_Truth;
     alltypes.rep_emptymsg_count = 5;
@@ -59,50 +60,33 @@ int main(int argc, char **argv)
     
     alltypes.req_limits.int32_min  = INT32_MIN;
     alltypes.req_limits.int32_max  = INT32_MAX;
-    alltypes.req_limits.uint32_min = 0;
+    // alltypes.req_limits.uint32_min = 0;
     alltypes.req_limits.uint32_max = UINT32_MAX;
     alltypes.req_limits.enum_min   = HugeEnum_Negative;
     alltypes.req_limits.enum_max   = HugeEnum_Positive;
     
-    if (mode != 0)
-    {
-        /* Fill in values for optional fields */
-        alltypes.has_opt_int32 = true;
-        alltypes.opt_int32         = 3041;
-        alltypes.has_opt_uint32 = true;
-        alltypes.opt_uint32        = 3043;
-        alltypes.has_opt_sint32 = true;
-        alltypes.opt_sint32        = 3045;
-        alltypes.has_opt_bool = true;
-        alltypes.opt_bool          = true;
-        
-        alltypes.has_opt_fixed32 = true;
-        alltypes.opt_fixed32       = 3048;
-        alltypes.has_opt_sfixed32 = true;
-        alltypes.opt_sfixed32      = 3049;
-        alltypes.has_opt_float = true;
-        alltypes.opt_float         = 3050.0f;
-        
-        alltypes.has_opt_string = true;
-        strcpy(alltypes.opt_string, "3054");
-        alltypes.has_opt_bytes = true;
-        alltypes.opt_bytes.size = 4;
-        memcpy(alltypes.opt_bytes.bytes, "3055", 4);
-        alltypes.has_opt_submsg = true;
-        strcpy(alltypes.opt_submsg.substuff1, "3056");
-        alltypes.opt_submsg.substuff2 = 3056;
-        alltypes.has_opt_enum = true;
-        alltypes.opt_enum = MyEnum_Truth;
-        alltypes.has_opt_emptymsg = true;
-        alltypes.has_opt_fbytes = true;
-        memcpy(alltypes.opt_fbytes, "3059", 4);
-
-        alltypes.which_oneof = AllTypes_oneof_msg1_tag;
-        strcpy(alltypes.oneof.oneof_msg1.substuff1, "4059");
-        alltypes.oneof.oneof_msg1.substuff2 = 4059;
-    }
+    alltypes.opt_int32         = 3041;
+    alltypes.opt_uint32        = 3043;
+    alltypes.opt_sint32        = 3045;
+    alltypes.opt_bool          = true;
     
-    alltypes.end = 1099;
+    alltypes.opt_fixed32       = 3048;
+    alltypes.opt_sfixed32      = 3049;
+    alltypes.opt_float         = 3050.0f;
+    
+    strcpy(alltypes.opt_string, "3054");
+    alltypes.opt_bytes.size = 4;
+    memcpy(alltypes.opt_bytes.bytes, "3055", 4);
+    // strcpy(alltypes.opt_submsg.substuff1, "3056");
+    // alltypes.opt_submsg.substuff2 = 3056;
+    alltypes.opt_enum = MyEnum_Truth;
+    memcpy(alltypes.opt_fbytes, "3059", 4);
+
+    //alltypes.which_oneof = AllTypes_oneof_msg1_tag;
+    //strcpy(alltypes.oneof.oneof_msg1.substuff1, "4059");
+    //alltypes.oneof.oneof_msg1.substuff2 = 4059;
+    
+    // alltypes.end = 1099;
     
     {
         uint8_t buffer[AllTypes_size];
