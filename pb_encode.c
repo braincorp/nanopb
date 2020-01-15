@@ -637,8 +637,8 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
 
     // We can't set stream->state to an updated value before we encode size, because it contains the
     // location of size. There is an implicit maximum size of 2^14 supported by this code, due to the
-    // fact that the byte shift operation is only performed once. This is fine for ethernet, where
-    // our (more restrictive) max size is closer to 2^10
+    // fact that the byte shift operation is only performed once. This is fine for single-packet ethernet, 
+    // where our (more restrictive) max size is closer to 2^10, but could break for much larger (split) messages. 
     if (!pb_encode_varint(stream, (pb_uint64_t)size))
         return false;
     stream->bytes_written += substream.bytes_written;
