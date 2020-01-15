@@ -607,7 +607,7 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
     /* First calculate the message size using a non-writing substream. */
     pb_ostream_t substream = PB_OSTREAM_SIZING;
     size_t size;
-    
+
     /* Use a substream to verify that a callback doesn't write more than
      * what it did the first time. */
     substream.callback = stream->callback;
@@ -617,7 +617,7 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
 #ifndef PB_NO_ERRMSG
     substream.errmsg = NULL;
 #endif
-    
+
     if (!pb_encode(&substream, fields, src_struct))
     {
 #ifndef PB_NO_ERRMSG
@@ -626,14 +626,19 @@ bool checkreturn pb_encode_submessage(pb_ostream_t *stream, const pb_field_t fie
 #endif
         return false;
     }
-    
+
     size = substream.bytes_written;
     if(size > VARINT_ONE_BYTE)
     {
         if (!pb_shift_data_1_byte(stream, substream.bytes_written))
             return false;
+        substream.state = (pb_byte_t*)substream.state + 1;
     }
-    
+
+    // We can't set stream->state to an updated value before we encode size, because it contains the
+    // location of size. There is an implicit maximum size of 2^14 supported by this code, due to the
+    // fact that the byte shift operation is only performed once. This is fine for ethernet, where
+    // our (more restrictive) max size is closer to 2^10
     if (!pb_encode_varint(stream, (pb_uint64_t)size))
         return false;
     stream->bytes_written += substream.bytes_written;
