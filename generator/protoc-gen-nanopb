@@ -10,4 +10,13 @@
 # --plugin= on the command line.
 
 MYPATH=$(dirname "$0")
-exec "$MYPATH/nanopb_generator.py" --protoc-plugin
+check=1
+i=0
+iterations=10
+while [ $check -ne 0 ] && [ $i -le $iterations ]; do
+    i=$((i+1))
+    python $MYPATH/nanopb_generator.py --protoc-plugin
+    check=$?
+done
+exit $check
+
