@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import unicode_literals
 
@@ -336,7 +336,7 @@ class Field:
         if field_options.type == nanopb_pb2.FT_STATIC and not can_be_static:
             raise Exception("Field '%s' is defined as static, but max_size or "
                             "max_count is not given." % self.name)
-        
+
         if field_options.fixed_count and self.max_count is None:
             raise Exception("Field '%s' is defined as fixed count, "
                             "but max_count is not given." % self.name)
@@ -1550,7 +1550,7 @@ def parse_file(filename, fdesc, options):
             optfilename = os.path.join(p, optfilename)
             if options.verbose:
                 sys.stderr.write('Reading options from ' + optfilename + '\n')
-            Globals.separate_options = read_options_file(open(optfilename, "rU"))
+            Globals.separate_options = read_options_file(open(optfilename, "r"))
             break
     else:
         # If we are given a full filename and it does not exist, give an error.
