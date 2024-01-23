@@ -9,6 +9,8 @@
 *_pb2.py
 *~
 *.tar.gz
+*.a
+*.cmake
 .sconsign.dblite
 config.log
 .sconf_temp
@@ -26,3 +28,6 @@ examples/using_double_on_avr/test_conversions
 examples/using_union_messages/decode
 examples/using_union_messages/encode
 generator/nanopb_pb2.pyc
+Makefile
+CMakeFiles
+CMakeCache.txt
