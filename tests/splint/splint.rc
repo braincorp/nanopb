@@ -28,6 +28,7 @@
 -branchstate
 -immediatetrans
 -mustfreefresh
+-allimponly
 
 # These tests give false positives, compiler typically has
 # better warnings for these.
@@ -35,3 +36,5 @@
 -noeffect
 -usedef
 
+# Splint doesn't support C11
+-DPB_C99_STATIC_ASSERT
