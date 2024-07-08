@@ -29,7 +29,7 @@
 /* #define PB_NO_ERRMSG 1 */
 
 /* Disable support for custom streams (support only memory buffers). */
-/* #define PB_BUFFER_ONLY 1 */
+#define PB_BUFFER_ONLY 1
 
 /* Disable support for 64-bit datatypes, for compilers without int64_t
    or to save some code space. */
@@ -46,7 +46,7 @@
 
 /* Check whether incoming strings are valid UTF-8 sequences. Slows down
  * the string processing slightly and slightly increases code size. */
-/* #define PB_VALIDATE_UTF8 1 */
+#define PB_VALIDATE_UTF8 1
 
 /* This can be defined if the platform is little-endian and has 8-bit bytes.
  * Normally it is automatically detected based on __BYTE_ORDER__ macro. */
